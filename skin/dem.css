@@ -1,0 +1,76 @@
+
+#buttoncontainerPV{
+    height: 80px;
+}
+#buttoncontainerCompco{
+    height: 100px;
+}
+#buttoncontainerMulco{
+    height: 250px;
+}
+.previewPanel{
+    max-height: 400px;
+    min-height: 200px;
+    overflow: auto;
+}
+#buttoncontainerMulco, #buttoncontainerCompco, #buttoncontainerPV{
+    overflow: auto;
+}
+.image_overlay .rating div.down, .image_overlay .rating div.up {
+    background: url("chrome://baya/content/vote_sprite_small.png") no-repeat scroll 0 0 transparent;
+    height: 40px;
+    overflow: hidden;
+    min-width: 35px;
+    float: left;
+}
+.image_overlay .rating div.down {
+    background-position: 0 0;
+    margin-left: 90px;
+    width: 35px;
+}
+.image_overlay .rating div.up {
+    background-position: -35px 0;
+    width: 40px;
+}
+.image_overlay .rating div.down:hover {
+    background-position: 0 -40px;
+    width: 35px;
+}
+.image_overlay .rating div.up:hover {
+    background-position: -35px -80px;
+    width: 40px;
+}
+#favor_percent_268{
+  clear: both;
+}
+#per{
+  font-weight:  bold;
+}
+a.tag{
+    color: #17679F;
+    cursor:  pointer;
+}
+#infoContainer{
+    max-width: 270px;
+    text-align: center;
+    padding: 0px 5px 10px 5px;
+}
+#infoContainer span a{
+    color: green;
+}
+#tags{
+    max-width: 270px;
+    text-align: left;
+}
+span.error-message{
+    color: red;
+    font-weight: bold;
+}
+
+h4.yahoo-accordion-title-vert{
+    cursor:  default;
+    text-align: center;
+}
+.left-margin{
+    border-left: 2px solid #D4D4D4;
+}

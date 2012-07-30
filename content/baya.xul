@@ -1,0 +1,152 @@
+<?xml version="1.0"?>
+
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+<?xml-stylesheet href="chrome://baya/skin/dem.css" type="text/css"?>
+<?xml-stylesheet href="http://pipes.yahoo.com/css/library.css?vcb3.1" type="text/css"?>
+<?xml-stylesheet href="http://jqueryui.com/themes/base/jquery.ui.all.css" type="text/css"?>
+
+<!DOCTYPE overlay SYSTEM "chrome://baya/locale/browserOverlay.dtd">
+
+<overlay id="Baya" title="Baya"
+         xmlns:html="http://www.w3.org/1999/xhtml"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"  >
+  
+  
+  
+    <script src="chrome://baya/content/GLOBAL_VAR.js"></script>
+    <script src="chrome://baya/content/Utility.js"></script>
+    <script src="chrome://baya/content/Loader.js"></script>
+    <script src="chrome://baya/content/XHRintercepting.js"></script>
+    <script src="chrome://baya/content/Persistence.js"></script>
+    <script src="chrome://baya/content/EventHandler.js"></script>
+    <script src="chrome://baya/content/OARLib.js"></script>
+    <script src="chrome://baya/content/weaver.js"></script>
+    <script src="chrome://baya/content/mashupoperation.js"></script>
+    <script src="chrome://baya/content/ThumbGenerator.js"></script>
+        
+   
+          
+    <window id="main-window">
+        <deck id="tab-view-deck">
+            <vbox id="browser-panel">
+                <hbox id="browser" >
+                    <tooltip id="contextmenu">
+                      <label value="Update the current database recommendations definition" />
+                    </tooltip>
+                    <hbox id="bayaMenu" hidden="true" style="max-width: 270px;" >
+                        <vbox style="background-color:rgb(255,255,255);" >
+                            <html:div class="menubar" id="pipetabs1"  border="0px;" style="background-color:#ECECEC;display:block; padding:10px 0px 2px 40px; border-bottom: 1px solid #B8B8B8;" >
+                                <html:div class="searchbar">
+                                    <html:input type="text" autocomplete="on" value="Search for patterns" class="novalue" >
+                                    </html:input>
+                                    <html:div class="search">
+
+                                        <html:ul>    
+                                        </html:ul>
+                                        <html:div class="searchStatus">
+                                            <html:span>
+                                            </html:span>
+                                        </html:div>
+                                    </html:div>
+                                </html:div>
+                                  
+                            </html:div>
+            <!-- end of Menu Bar-->
+
+            <!-- start of edit button-->
+                            <html:div  id="editbuttons1" class="editbuttons" style="display:block;">
+
+                                <html:ul class="leftset" style="display:inline;width:240px;margin:auto;">
+                                    <html:li class="disabled" style="display:inline; margin:auto;" onmouseover="displayExplenation(this)" title="Let you save your current pattern in Baya, sharing it with the community (Not yet available)">
+                                        <html:div class="menubigbutton" style="display:block">Save Pattern
+                                            <html:div class="menubigbuttonleft"></html:div>
+                                            <html:div class="menubigbuttonright"></html:div>
+                                        </html:div>
+                                    </html:li> 
+                                    <html:li id="updateDbBtn" style="display:inline;margin:auto;" onclick="updateDb()" onmouseover="displayExplenation(this)" title="Update database recommendations definition">
+                                        <html:div class="menubigbutton" style="display:block;">Update Database
+                                            <html:div class="menubigbuttonleft"></html:div>
+                                            <html:div class="menubigbuttonright"></html:div>
+                                        </html:div>
+                                    </html:li>
+                                      
+                                </html:ul>
+                            </html:div>
+
+            <!-- end of edit Button-->
+
+                            <vbox style="overflow:auto" flex="1" resizable="false" class="left-margin" >
+                              
+                <!-- start of pattern container-->
+
+                                <html:div class="yahoo-accordion-container" id="accContainer" style="background-color: rgb(255, 255, 255); display:block;;  position: absolute; bottom:0px;">
+                    <!-- start of pattern menu-->
+
+                    <!-- Parameter Value Pattern-->
+
+                                    <html:div class="yahoo-accordion-title-vert show" id="parval" style="height: 15px; opacity: 1; display:block;" onclick="showHide(this);" >Parameter Value</html:div>
+                                    <html:div class="yahoo-accordion-content-clip-vert" style="opacity: 1; display:none">
+                                        <html:div class="yahoo-accordion-content-vert" >
+                                            <html:div id="buttoncontainerPV" >﻿
+
+                                            </html:div>
+                                        </html:div>
+                                    </html:div>
+
+                    <!-- end of Parameter Value pattern div-->
+
+                    <!-- Start of Component Cooccurence Pattern-->
+
+                                    <html:div class="yahoo-accordion-title-vert show" id="Comco" style="height: 15px; opacity: 1; display:block;" onclick="showHide(this);" >Component Cooccurence</html:div>
+                                    <html:div class="yahoo-accordion-content-clip-vert" style="opacity: 1; display:none">
+                                        <html:div class="yahoo-accordion-content-vert" >
+                                            <html:div id="buttoncontainerCompco">
+
+
+                                            </html:div>
+                                        </html:div>
+                                    </html:div>
+
+                    <!-- end of Component Co-occurence pattern  -->
+
+                    <!-- Start of Multi-components Pattern-->
+                                    <html:div class="yahoo-accordion-title-vert show" id="Commul" style="height: 15px; opacity: 1; display:block;" onclick="showHide(this);">Multi-components </html:div>
+                                    <html:div class="yahoo-accordion-content-clip-vert" style="opacity: 1; display:none">
+                                        <html:div class="yahoo-accordion-content-vert" >
+                                            <html:div id="buttoncontainerMulco">
+                                            </html:div>
+                                        </html:div>
+                                    </html:div>
+
+
+                                </html:div>
+
+                            </vbox>
+
+            <!-- end of  pattern container  -->
+            <!-- resizable splitter for the preview panel--> 
+                            <splitter class="left-margin">
+                            </splitter>
+            <!--  end of resizable splitter for the preview panel--> 
+
+            <!--help area splitter button as per the style from yahoo pipes-->
+                            <html:div class="splitter topbottom smalltopbottom left-margin" style="display: block; position: absolute; bottom:0px; " id="splittertopbottomsmalltopbottom4">
+                                <html:div class="sliderhoriz" id="sliderhoriz3">
+                                    <html:div class="horizbutton makemin" onclick="document.getElementById('accContainer').style.height=700px;" >
+                                    </html:div>
+                                </html:div>
+                            </html:div>
+            <!-- help container text in this div-->
+                            <html:div id="infoContainer" class="left-margin" style="text-align: center;" resizable="true"></html:div>
+                            
+            <!-- end of help area-->
+                         
+
+                        </vbox>
+                    </hbox>  
+                </hbox>
+            </vbox>
+        </deck>
+    </window>
+</overlay>
+  

@@ -1,0 +1,5 @@
+content   baya                content/
+skin      baya  classic/1.0   skin/
+locale    baya  en-US         locale/en-US/
+
+overlay chrome://browser/content/browser.xul  chrome://baya/content/baya.xul
