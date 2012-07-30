@@ -1,5 +1,0 @@
-function processByXOARLib(component, type, action){
-    switch (component, type, action){
-        case ""
-    }
-}
