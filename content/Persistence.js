@@ -5,29 +5,112 @@ Components.utils.import("resource://gre/modules/Services.jsm");
 Components.utils.import("resource://gre/modules/FileUtils.jsm");
 
 var file = FileUtils.getFile("ProfD", ["bayatest.sqlite"]);
+var voteFile = FileUtils.getFile("ProfD", ["bayaVoteDB.sqlite"]);
 var filePath = file.path;
 var db = Services.storage.openDatabase(file);
-
+var voteDB = Services.storage.openDatabase(voteFile);
 /**
  * Init the local db
  */
 function initDB(){
     try{
-        db.executeSimpleSQL('create table if not exists ParameterValues (componentName varchar(100), conf varchar(1000), desc varchar(1000),  '+
+        db.executeSimpleSQL('create table if not exists ParameterValues (componentName varchar(100), conf text, desc varchar(1000),  '+
             ' Tags varchar(100), usage int(10), DownVotes int(10), UpVotes int(10), date  datetime DEFAULT current_timestamp ,'+
             ' primary key(componentName, conf) );');
-        db.executeSimpleSQL('create table if not exists CompCo ( srcComp varchar(1000), conf varchar(1000), desc varchar(1000), '+
-            ' Tags varchar(100), UpVotes int(10), usage int(10), DownVotes int(10), date  datetime DEFAULT current_timestamp,'+
+        db.executeSimpleSQL('create table if not exists CompCo ( srcComp varchar(1000), conf text, desc varchar(1000), '+
+            ' Tags varchar(256), UpVotes int(20), usage int(20), DownVotes int(20), date  Timestamp DEFAULT current_timestamp,'+
             ' primary key(srcComp, conf) ); ');
-        db.executeSimpleSQL('create table if not exists MultiCo ' +
-            '(srcComp varchar(1000), conf varchar(1000), desc varchar(1000), Tags varchar(100), ' +
+        db.executeSimpleSQL('create table if not exists MultiCompCo ' +
+            '(srcComp varchar(1000), conf text, desc varchar(1000), Tags varchar(100), ' +
             'UpVotes int(10), DownVotes int(10), usage int(10), date  datetime DEFAULT current_timestamp, primary key(srcComp, conf) ) '); 
     }catch(e){
         logE(e);
     }
     fill4DEMO();
 }
+
+//Function to init VoteDB, used to avoid multiple vote of a singleComp by a user
+function initVoteDB(){
+    try{
+        voteDB.executeSimpleSQL('create table if not exists AlreadyVoted (conf text , primary key(conf))');
+    }catch(e){
+        logE(e);
+    }
+}
+
+//Function to save an entry in the vote Table
+function saveVote(json, typeVote, typeRecommendation,votes){
+    try{
+        var stmt = voteDB.createAsyncStatement("INSERT INTO AlreadyVoted(conf) values(:json) ");
+        stmt.params.json = json;
+    
+        stmt.executeAsync({
+            handleError: function(aError) {  
+                printErrorInVote();
+            },  
+      
+            handleCompletion: function(aReason) {  
+                if (aReason != Components.interfaces.mozIStorageStatementCallback.REASON_FINISHED)
+                    printErrorInVote();
+                else{
+                    //Just add the url to which send the request
+                    /*
+                    var req = new XMLHttpRequest();
+                    req.open("POST", "http://pipes.yahoo.com/pipes/ajax.pipe.save", true);
+                    req.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
+                    //Now we send the xmlHttpRequest
+                    req.send(postString);  */
+                    //TODO: write code to update the client db
+                    try{
+                        var stmt;
+                        switch(typeRecommendation){
+                            case (ParameterValues):
+                                stmt = db.createAsyncStatement('UPDATE ParameterValues SET \''+typeVote+'\' = :votes  WHERE ParameterValues.conf like :json');
+                                break;
+                            case (CompCo):
+                                stmt = db.createAsyncStatement('Update CompCo set \''+typeVote+'\' = :votes where CompCo.conf like :json');
+                                break;
+                            case (MultiCompCo):
+                                stmt = db.createAsyncStatement('Update MultiCompCo set \''+typeVote+'\' = :votes where MultiCompCo.conf like :json');
+                                break;
+                            default:
+                                return;
+                        }
+                        stmt.params.votes = votes;
+                        stmt.params.json = json;
+                        stmt.executeAsync({
+                            handleCompletion: function(aReason) {
+                                log("update query completed");    
+                            },
+                            handleError: function(aError) {  
+                                log("Error in update query: " + aError.message);  
+                            },
+                        });
+                        
+                    } catch(e){
+                        logE(e);    
+                    }  
+                        
+                }
+            }
+        });
+    } catch(e){
+        logE(e);
+    } 
+}
+
+//Function to print "you have already reated this component"
+function printErrorInVote(){
+    var div = document.getElementById("favor_percent_268");
+    while(div.firstChild)
+        div.removeChild(div.firstChild);
+    
+    div.appendChild(document.createTextNode("You have already rated this component"));
+}
+
+
 initDB();
+initVoteDB();
 
 function updateDb(){
     
@@ -312,7 +395,7 @@ function fill4DEMO(){
     ///MULCO ##########################################################################
     try{
         //filter -> loc. extractor -> output
-        var stmt = db.createStatement("INSERT INTO MultiCo (srcComp, conf, desc, UpVotes, DownVotes, usage, Tags ) values(:name, :conf, :desc, :UpVotes, :DownVotes, :usage, :Tags)");
+        var stmt = db.createStatement("INSERT INTO MultiCompCo (srcComp, conf, desc, UpVotes, DownVotes, usage, Tags ) values(:name, :conf, :desc, :UpVotes, :DownVotes, :usage, :Tags)");
         stmt.params.name = "filter";
         stmt.params.desc = "To be decided";
         stmt.params.conf = '{"modules":[{"type":"filter","id":"sw-125","conf":{"MODE":{"type":"text","value":"permit"},"COMBINE":{"type":"text","value":"or"},"RULE":[{"field":{"value":"description","type":"text"},"op":{"type":"text","value":"contains"},"value":{"value":"Apple","type":"text"}},{"field":{"value":"description","type":"text"},"op":{"type":"text","value":"contains"},"value":{"value":"macbook","type":"text"}}]}},{"type":"geotag","id":"sw-144","conf":{}}],"terminaldata":[],"wires":[{"id":"_w5","src":{"id":"_OUTPUT","moduleid":"filter"},"tgt":{"id":"_INPUT","moduleid":"geotag"}},{"id":"_w7","src":{"id":"_OUTPUT","moduleid":"geotag"},"tgt":{"id":"_INPUT","moduleid":"_OUTPUT"}}]}';
@@ -333,7 +416,7 @@ function fill4DEMO(){
     
     try{
         //url builder, fetch feed, filter
-        var stmt = db.createStatement("INSERT INTO MultiCo (srcComp, conf, desc, UpVotes, DownVotes, usage, Tags ) values(:name, :conf, :desc, :UpVotes, :DownVotes, :usage, :Tags)");
+        var stmt = db.createStatement("INSERT INTO MultiCompCo (srcComp, conf, desc, UpVotes, DownVotes, usage, Tags ) values(:name, :conf, :desc, :UpVotes, :DownVotes, :usage, :Tags)");
         stmt.params.name = "urlbuilder";
         stmt.params.desc = "To be decided";
         stmt.params.conf = '{"modules":[{"type":"urlbuilder","id":"sw-3","conf":{"BASE":{"value":"http://ws.geonames.org","type":"text"},"PORT":{"value":"0","type":"number"},"PATH":{"value":"rssToGeoRSS","type":"text"},"PARAM":[{"key":{"value":"feedUrl","type":"text"},"value":{"value":"news.google.com/news?output=rss","type":"text"}}]}},{"type":"fetch","id":"sw-117","conf":{"URL":{"type":"url","terminal":"1_URL"}}},{"type":"filter","id":"sw-125","conf":{"MODE":{"type":"text","value":"permit"},"COMBINE":{"type":"text","value":"or"},"RULE":[{"field":{"value":"description","type":"text"},"op":{"type":"text","value":"contains"},"value":{"value":"Apple","type":"text"}},{"field":{"value":"description","type":"text"},"op":{"type":"text","value":"contains"},"value":{"value":"macbook","type":"text"}}]}}],"wires":[{"id":"_w0","src":{"id":"_OUTPUT","moduleid":"urlbuilder"},"tgt":{"id":"1_URL","moduleid":"fetch"}},{"id":"_w1","src":{"id":"_OUTPUT","moduleid":"fetch"},"tgt":{"id":"_INPUT","moduleid":"filter"}}],"terminaldata":[]}';
@@ -354,7 +437,7 @@ function fill4DEMO(){
     
     try{
         //split -> count, filter -> location
-        var stmt = db.createStatement("INSERT INTO MultiCo (srcComp, conf, desc, UpVotes, DownVotes, usage, Tags ) values(:name, :conf, :desc, :UpVotes, :DownVotes, :usage, :Tags)");
+        var stmt = db.createStatement("INSERT INTO MultiCompCo (srcComp, conf, desc, UpVotes, DownVotes, usage, Tags ) values(:name, :conf, :desc, :UpVotes, :DownVotes, :usage, :Tags)");
         stmt.params.name = "split";
         stmt.params.desc = "To be decided";
         stmt.params.conf = '{"modules":[{"type":"split","id":"sw-187","conf":{}},{"type":"count","id":"sw-206","conf":{}},{"type":"filter","id":"sw-213","conf":{"MODE":{"type":"text","value":"block"},"COMBINE":{"type":"text","value":"and"},"RULE":[{"field":{"value":"title","type":"text"},"op":{"type":"text","value":"contains"},"value":{"value":"Yahoo","type":"text"}}]}},{"type":"geotag","id":"sw-224","conf":{}}],"wires":[{"id":"_w9","src":{"id":"_OUTPUT","moduleid":"split"},"tgt":{"id":"_INPUT","moduleid":"count"}},{"id":"_w11","src":{"id":"_OUTPUT4","moduleid":"split"},"tgt":{"id":"_INPUT","moduleid":"filter"}},{"id":"_w13","src":{"id":"_OUTPUT","moduleid":"filter"},"tgt":{"id":"_INPUT","moduleid":"geotag"}}],"terminaldata":[]}';
@@ -459,7 +542,7 @@ function getComCoList(name){
                 }
             },
             handleError: function(aError) {  
-                log("Error: " + aError.message);  
+                log("Error in CompCo query: " + aError.message+ " "+JSON.stringify(aError));  
             },  
   
             handleCompletion: function(aReason) {  
@@ -486,7 +569,7 @@ function getComCoList(name){
 
 function getMulcoList(name){
     try{
-        var stmt = db.createAsyncStatement("SELECT * FROM MultiCo WHERE srcComp like :name ");
+        var stmt = db.createAsyncStatement("SELECT * FROM MultiCompCo WHERE srcComp like :name ");
         res.mul_co = new Array();
         stmt.params.name = name;
     
@@ -630,13 +713,17 @@ function showPrev(name, DownVotes, UpVotes, date, usage, Tagstring, json,type){
     var down = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
     down.setAttribute("class", "down");
     down.setAttribute("id", "down1");
-    down.setAttribute("onclick", "VoteDown("+UpVotes+", "+DownVotes+");");
+    down.addEventListener("click",function(){
+        VoteDown(UpVotes, DownVotes, json, type);    
+    },false);
     down.appendChild(document.createTextNode(""));
     
     var up = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
     up.setAttribute("class", "up");
     up.setAttribute("id", "up1");
-    up.setAttribute("onclick", "VoteUP("+UpVotes+", "+DownVotes+");");
+    up.addEventListener("click",function(){
+        VoteUP(UpVotes, DownVotes, json, type);    
+    },false);
     up.appendChild(document.createTextNode(""));
     
     //The div with percentages of votes
@@ -694,9 +781,9 @@ function showPrev(name, DownVotes, UpVotes, date, usage, Tagstring, json,type){
 /**
  * FUnctions to handle the vote of a partculat pattern
  */
-function VoteUP(UpVotes, DownVotes)
+function VoteUP(UpVotes, DownVotes, json, type)
 {
-    UpVotes += 1;
+    saveVote(json, "UpVotes", type, ++UpVotes);
     var num = mainWindow.document.getElementById('num');
     num.removeChild(num.firstChild);
     num.appendChild(document.createTextNode(UpVotes+DownVotes)); 
@@ -707,15 +794,19 @@ function VoteUP(UpVotes, DownVotes)
     per.appendChild(document.createTextNode(tmp.toFixed(2)));
     
     var up = mainWindow.document.getElementById('up1');
-    up.setAttribute("onclick", "VoteUP("+UpVotes+", "+DownVotes+");");
+    up.addEventListener("click",function(){
+        VoteUP(UpVotes, DownVotes, json, type);    
+    },false);
     
     var down = mainWindow.document.getElementById('down1');
-    down.setAttribute("onclick", "VoteDown("+UpVotes+", "+DownVotes+");");   
+    down.addEventListener("click",function(){
+        VoteDown(UpVotes, DownVotes, json, type);    
+    },false);
 }
          
-function VoteDown(UpVotes, DownVotes)
-{       
-    DownVotes += 1;
+function VoteDown(UpVotes, DownVotes, json, type)
+{
+    saveVote(json, "DownVotes", type, ++DownVotes);
     var num = mainWindow.document.getElementById('num');
     num.removeChild(num.firstChild);
     num.appendChild(document.createTextNode(UpVotes+DownVotes)); 
@@ -726,8 +817,12 @@ function VoteDown(UpVotes, DownVotes)
     per.appendChild(document.createTextNode(tmp.toFixed(2)));
     
     var up = mainWindow.document.getElementById('up1');
-    up.setAttribute("onclick", "VoteUP("+UpVotes+", "+DownVotes+");");
+    up.addEventListener("click",function(){
+        VoteUP(UpVotes, DownVotes, json, type);    
+    },false);
     
     var down = mainWindow.document.getElementById('down1');
-    down.setAttribute("onclick", "VoteDown("+UpVotes+", "+DownVotes+");");
+    down.addEventListener("click",function(){
+        VoteDown(UpVotes, DownVotes, json, type);    
+    },false);
 }

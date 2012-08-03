@@ -79,17 +79,27 @@ function drawSmallPV(type,json){
 
 //draws Compco Thumbnails
 function drawSmallCompCo(name,json){
+	
 	try{
 		json = JSON.parse(json);
 	} catch (e){
-		return;
+		json = json.replace("\\","\\\\");
+		json = json.replace(" ", "");
+		json = json.replace("	", "");
+		try{
+			json = JSON.parse(json);
+		} catch(e){
+			return;
+		}
+		
 	}
 	try{
-		var wire = json["wires"][0];
+		var wire = json.wires[0];
 		var div1 = createSmallDiv(wire["src"]["moduleid"],wire["src"]["moduleid"],drawBigCompCo,JSON.stringify(json),null,weaveCompCo);
 		var div2 = createSmallDiv(wire["tgt"]["moduleid"],wire["tgt"]["moduleid"],drawBigCompCo,JSON.stringify(json),null,weaveCompCo);
 	}catch(e){
-		log(e.message+" -> "+json);
+		logE(e);
+		
 	}
     
 	/*div1.appendChild(document.createElementNS("http://www.w3.org/1999/xhtml", "br"));
@@ -109,7 +119,17 @@ function drawSmallCompCo(name,json){
 //function that draws mulco patterns
 function drawSmallMulco (sourceComp, json){
     var divs = [];
-    json = JSON.parse(json);
+	
+	try{
+		json = JSON.parse(json);
+	} catch(e){
+		json = json.replace("\\","\\\\");
+		try{
+			json = JSON.parse(json);
+		} catch(e){
+			return;
+		}
+	}
 	var base = sourceComp;
     
     //We create all small thumbnail for each module
@@ -135,7 +155,7 @@ function drawSmallMulco (sourceComp, json){
             if(json["wires"][i]["src"]["moduleid"]== sourceComp){
                 var tmpComp = getDivFromarray(divs,json["wires"][i]["tgt"]["moduleid"]);
 				if(!tmpComp)
-					tmpComp = createSmallDiv("Pipe Output");
+					continue;
                 tmpComp.setAttribute("level",level);
 				setSmallDivsPositions(srcComp, tmpComp,++level,level-parseInt(srcComp.getAttribute("level")));
                 var can = document.createElementNS("http://www.w3.org/1999/xhtml","canvas");
@@ -196,8 +216,9 @@ function setSmallDivsPositions(parentDiv, childDiv, generation){
 	var offx = 0;
 	var offy = 0;
 	if(parentDiv){
+		var height = parseInt(parentDiv.style.height);
 		offx = parseInt(parentDiv.style.left);
-		offy = parseInt(parentDiv.style.top) + Smalldeltay*level;
+		offy = parseInt(parentDiv.style.top) + Smalldeltay;//parseInt(parentDiv.style.top) + Smalldeltay*level;
 	}
 
     childDiv.style.top = offy+"px";
@@ -256,6 +277,7 @@ function drawBigPV(type,json){
     div.setAttribute("comptype",type);
     json = JSON.parse(json)["conf"];
 	json = findKeysValues(json, type);
+	var filled = json.length > 0;
     
 	for(var i in json){
 		var text = json[i];
@@ -265,8 +287,8 @@ function drawBigPV(type,json){
 		div.appendChild(document.createElementNS("http://www.w3.org/1999/xhtml","br"));
 	}
 
-
-	div.addEventListener("mouseover", function(){
+	if(filled)
+		div.addEventListener("mouseover", function(){
 			div.style.height ="auto";
 			div.style.zIndex = 102;
 		},false);
@@ -283,7 +305,8 @@ function drawBigPV(type,json){
 		},false);
         return div;
     }
-	div.addEventListener("mouseout", function(){
+	if(filled)
+		div.addEventListener("mouseout", function(){
 			div.style.height =BigfixHeightPV+"px";
 			div.style.zIndex =101;
 		},false);
@@ -335,7 +358,7 @@ function drawBigMulco (sourceComp, json){
             if(json["wires"][i]["src"]["moduleid"]== sourceComp){
                 var tmpComp = getDivFromarray(divs,json["wires"][i]["tgt"]["moduleid"]);
 				if(!tmpComp)
-					tmpComp = createBigDiv("Pipe Output");
+					continue;
                 setBigDivsPositions(srcComp, tmpComp,++level,level-parseInt(srcComp.getAttribute("level")));
                 tmpComp.setAttribute("level",level);
                 var can = document.createElementNS("http://www.w3.org/1999/xhtml","canvas");
@@ -361,9 +384,7 @@ function setBigLabelsProperties(label, text){
     label.style.top = "0px";
     label.style.fontSize = "13px";
     label.appendChild(document.createTextNode(translateFromTypeToName(text)));
-    label.style.textAlign = "left";
-	
-	
+    label.style.textAlign = "left";	
 }
 
 //Default properties for each thumbnail div
@@ -398,7 +419,6 @@ function setBigDivsPositions(parentDiv, childDiv, generation){
 	var height = parseInt(parentDiv.style.height);
     var offx = parseInt(parentDiv.style.left);
     var offy = parseInt(parentDiv.style.top) + Bigdeltay*level+(height-BigfixHeight);
-	log(height+" "+offx+" "+offy+" of"+parentDiv.getAttribute("compType"));
     childDiv.style.top = offy+"px";
     if(generation%2 == 0){
 		childDiv.style.left = (offx-Bigdeltax)+"px";
@@ -445,6 +465,57 @@ function findKeysValues(json, type){
 	
 	switch(type){
 		
+		case "fetch":
+			var urls = json.URL;
+			if(Object.prototype.toString.call(urls) !== "[object Array]")
+				urls = [urls];
+			
+			for(var i in urls){
+				tmp.push("URL: "+urls[i].value);
+			}
+			break;
+		
+		case "fetchsitefeed":
+			var urls = json.URL;
+			if(Object.prototype.toString.call(urls) !== "[object Array]")
+				urls = [urls];
+			
+			for(var i in urls){
+				tmp.push("URL: "+urls[i].value);
+			}
+			break;
+		
+		case "sort":
+			var directive = json.KEY.dir.value;
+			if(directive == "DESC")
+				directive = " in a descendant order";
+			else
+				directive = " in a ascendant order";
+				
+			tmp.push("Sort items ordered by "+json.KEY.field.value+directive);
+			break;
+		
+		case "rssitembuilder":
+			tmp.push("Title: "+json.title.value);
+			tmp.push("Description: "+json.description.value);
+			tmp.push("Link: "+json.link.value);
+			tmp.push("Pub. date: "+json.pubdate.value);
+			tmp.push("Author: "+json.author.value);
+			break;
+		
+		
+		case "uniq":
+			var filterOn = json.field.value;
+			tmp.push("Filter non unique items based on "+filterOn);
+			break;
+		
+		case "flickr":
+			var number = json.number.value;
+			var about = json.text.value;
+			tmp.push("Get from Flickr "+number+"images about \""+about+"\"");
+			break;
+		
+					
 		case "filter":
 			var condition = json.COMBINE.value;
 			if (condition == "and")
@@ -453,7 +524,7 @@ function findKeysValues(json, type){
 				condition = "at least one"
 			tmp.push(json.MODE.value + " items that match "+condition+" of the following :"  );
 			var rules = json.RULE;
-			if(typeof(rules[0]) == "undefined")
+			if(Object.prototype.toString.call(rules) !== "[object Array]")
 				rules = [rules];
 			for(var i in rules){
 				var rule = rules[i];
@@ -491,7 +562,7 @@ function findKeysValues(json, type){
 				var keys = Object.keys(json);
 			} catch(e){
 				tmp.push(json);
-				return;
+				return null;
 			}
 			for(var i in keys){
 				var string = json[keys[i]];
@@ -542,14 +613,18 @@ function setSmallCanvasProperties(can, div1, div2){
 		offy1 = parseInt(div1.style.top);
 	}
     
-    var x2 = parseInt(div2.style.width);
-    var y2 = parseInt(div2.style.height);
-
-    
-    
-    var offx2 = parseInt(div2.style.left);
-    var offy2 = parseInt(div2.style.top);
+    var x2 = SmallfixWidth;
+    var y2 = SmallfixHeight;
+	var offx2 = Smalldeltax;
+    var offy2 = Smalldeltay;
 	
+	if(div2){
+		x2 = parseInt(div2.style.width);
+		y2 = parseInt(div2.style.height);
+		offx2 = parseInt(div2.style.left);
+		offy2 = parseInt(div2.style.top);
+	}
+
 	
     
     var leftToRight = (offx1+x1/2)<(offx2+x2/2);

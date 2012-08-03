@@ -1,3 +1,8 @@
+const ParameterValues = "pv";
+const CompCo = "comco";
+const MultiCompCo = "mulco";
+
+
 function getQueryVariable(text,variable) {
     var query = text;
     var vars = query.split("&");
@@ -80,6 +85,8 @@ function savePattern(postString){
 
 function translateFromNameToType(name){
        switch (name){
+              case "Unique":
+                     return "uniq";
               case "URL Builder":
                      return "urlbuilder";
               case "Find First Site Feed":
@@ -104,6 +111,10 @@ function translateFromNameToType(name){
 }
 function translateFromTypeToName(type){
        switch (type){
+              case "uniq":
+                     return "Unique";
+              case "output":
+                     return "Pipe Output";
               case "urlbuilder":
                      return "URL Builder";
               case "fetchsitefeed":

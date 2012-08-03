@@ -12,6 +12,7 @@
     max-height: 400px;
     min-height: 200px;
     overflow: auto;
+    overflow-x: auto;
 }
 #buttoncontainerMulco, #buttoncontainerCompco, #buttoncontainerPV{
     overflow: auto;

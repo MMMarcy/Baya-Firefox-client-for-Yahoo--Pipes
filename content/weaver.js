@@ -37,8 +37,21 @@ function weavePvalue(ComponentType,cp)
       log("adding Layout");
       lastPM.layout.push({"id":id,"xy":[Math.floor(Math.random()*1000),Math.floor(Math.random()*1000)]});
       modules.push({"type": ComponentType,"id":id,"conf":cp.conf});
-      
     }
+    //Removing all components that are in the layout but NOT in modules
+    for(var i in lastPM.layout){
+      var isInModules = false;
+      for(var k in lastPM.modules){
+        if(lastPM.layout[i].id == lastPM.modules[k].id){
+          isInModules = true;
+          break;
+        }
+      }
+      if(!isInModules){
+        lastPM.layout.splice(i,1);
+      }
+    }
+    
     session.lastComp = ComponentType;
     session.pm.push(lastPM);
     //if the call come from a weaving action it weaves, if it's used by compCo or Mulco not
@@ -57,28 +70,45 @@ function weavePvalue(ComponentType,cp)
 
 } 
 
-//Process in two steps. i chech the 2 modules calling PV. If they are not present will be added by the call. They i will add the wire that link the 2 components.
+//Process in two steps. i check the 2 modules calling PV. If they are not present will be added by the call. Then i will add the wire that link the 2 components, removing old ones exiting from the source cmp
 function weaveCompCoo(ComponentType,cp)
 {
   cp = JSON.parse(cp);
   
   //Add modules if needed
   for(var i in cp.modules){
-    weavePvalue(cp.modules[i].type,JSON.stringify(cp.modules[i]), false);
+    weavePvalue(cp.modules[i].type,JSON.stringify(cp.modules[i]), true);
   }
   var wire = cp.wires[0];
   var lastPM = session.pm.pop();
   var modules = lastPM.modules;
   //Set the wire
   for(var i in modules){
-    if(modules[i].type == wire.src.moduleid){
+    if(modules[i].type == ComponentType){
       wire.src.moduleid = modules[i].id;
-      continue;
+      //If != split we remove old wires exiting from the source Components
+      for(var k in lastPM.wires){
+          if(lastPM.wires[k].src.moduleid == wire.src.moduleid && ComponentType != "split"){
+            log("removin an obsolete wire -> before "+lastPM.wires.length);
+            var arr = lastPM.wires.splice(k,1);
+            log("removin an obsolete wire -> after "+lastPM.wires.length);
+          }
+      }
+      
     }
     if(modules[i].type == wire.tgt.moduleid){
       wire.tgt.moduleid = modules[i].id;
-      continue;
     }
+    //If != union we remove old wires exiting from the source Components
+      for(var k in lastPM.wires){
+          if(lastPM.wires[k].tgt.moduleid == wire.tgt.moduleid && ComponentType != "union"){
+            log("removin an obsolete exiting wire -> before "+lastPM.wires.length);
+            var arr = lastPM.wires.splice(k,1);
+            log("removin an obsolete exiting wire -> after "+lastPM.wires.length);
+          }
+      }
+    
+    
   }
   //Add the wire to the pm
   lastPM.wires.push(wire);
@@ -108,7 +138,7 @@ function weaveCompCoo(ComponentType,cp)
 function weaveMultico(ComponentType,cp)
 {
     cp = JSON.parse(cp);
-    try{
+    /*try{
        
         var srcComponentID;
                
@@ -228,8 +258,22 @@ function weaveMultico(ComponentType,cp)
             //log("before addconnector in multi@@@@@@@@@@@@@@@@@ src id-->"+ JSON.stringify(wireJson[m].src.moduleid)+"target id-->"+ JSON.stringify(wireJson[m].tgt.moduleid)+"json is -->"+JSON.stringify(wireJson[m]));
             addConnector(wireJson[m].src.moduleid, wireJson[m].tgt.moduleid, wireJson[m]);
         
-        }
+        }*/
 
+    for(var i in cp.wires){
+      var tmpJSON = new Object();
+      tmpJSON.wires = [cp.wires[i]];
+      tmpJSON.modules = new Array();
+      for(var k in cp.modules){
+        if(cp.modules[k].type == tmpJSON.wires[0].src.moduleid){
+          tmpJSON.modules.push(cp.modules[k]);
+        }
+        if(cp.modules[k].type == tmpJSON.wires[0].tgt.moduleid){
+          tmpJSON.modules.push(cp.modules[k]);
+        }
+      }
+      weaveCompCoo(tmpJSON.wires[0].src.moduleid,JSON.stringify(tmpJSON),true);
+    }
         
         //log(JSON.stringify(session.pm[session.pm.length-1]);
         //TODO: now we also need to send back this modified pm back to server.
@@ -247,9 +291,9 @@ function weaveMultico(ComponentType,cp)
         //log("the sent string for multi pattern is ----->"+str); 
         
         return;
-    } catch (e) {
+    /*} catch (e) {
         log(e.message+", "+e.lineNumber);
-    }
+    }*/
 }
 
 
@@ -263,9 +307,15 @@ function weaveMultico(ComponentType,cp)
 
 function setComponentID()
 {
-    log("dentro setComponentId");
-    var randomnumber=Math.floor(Math.random()*101);
+
+    var randomnumber=Math.floor(Math.random()*300+1);
     var cid="sw-"+randomnumber;
+    return cid;
+}
+
+function setWireId(){
+  var randomnumber=Math.floor(Math.random()*300+1);
+    var cid="_w"+randomnumber;
     return cid;
 }
 
